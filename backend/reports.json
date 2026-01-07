@@ -1,0 +1,32 @@
+[
+    {
+        "id": "ec45255b-4fee-475f-8f83-e62f0e489a3d",
+        "name": "abbas",
+        "level": "1",
+        "category": "Elektrik",
+        "issue": "jaring rosak",
+        "image_url": "http://localhost:5000/uploads/c46d13a4-3340-4559-9397-f4761603ed51_WhatsApp Image 2026-01-02 at 5.37.43 PM.jpeg",
+        "status": "Baru",
+        "date": "2026-01-03T09:23:53.142457"
+    },
+    {
+        "id": "1e23654b-ba33-4170-929f-66187965db4c",
+        "name": "Aiman",
+        "level": "G",
+        "category": "Bangunan",
+        "issue": "Pintu/Tombol Rosak",
+        "image_url": "http://localhost:5000/uploads/ab1afa6a-bd41-49d0-bf91-9dc08835337e_image.jpg",
+        "status": "Baru",
+        "date": "2026-01-03T09:33:56.916856"
+    },
+    {
+        "id": "cdd19c9f-0c9e-46a6-b91b-2f7c1c40513b",
+        "name": "Abbas ",
+        "level": "1",
+        "category": "Bangunan",
+        "issue": "Siling Bocor",
+        "image_url": "http://localhost:5000/uploads/207da52e-c36a-4370-a0db-6a5aa36b06de_image.jpg",
+        "status": "Baru",
+        "date": "2026-01-05T16:55:55.443284"
+    }
+]
