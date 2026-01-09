@@ -63,7 +63,9 @@ def submit_report():
             "issue": issue,
             "status": "Baru",
             "date": datetime.datetime.now().isoformat(),
-            "image_url": f"http://localhost:5000/uploads/{filename}" if filename else ""
+            # "image_url": f"http://localhost:5000/uploads/{filename}" if filename else ""
+            "image_url": f"http://172.20.10.3:5000/uploads/{filename}" if filename else ""
+            
         }
 
         reports.insert(0, new_report)
@@ -81,4 +83,4 @@ def uploaded_file(filename):
 
 if __name__ == '__main__':
     print("✅ Server running on http://localhost:5000")
-    app.run(debug=True, port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5000)

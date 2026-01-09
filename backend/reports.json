@@ -1,5 +1,15 @@
 [
     {
+        "id": "4",
+        "name": "Arman",
+        "level": "G",
+        "category": "Elektrik",
+        "issue": "Soket Tidak Berfungsi",
+        "status": "Baru",
+        "date": "2026-01-09T23:04:55.030738",
+        "image_url": "http://172.20.10.3:5000/uploads/1767971095.027927_image.jpg"
+    },
+    {
         "id": "ec45255b-4fee-475f-8f83-e62f0e489a3d",
         "name": "abbas",
         "level": "1",

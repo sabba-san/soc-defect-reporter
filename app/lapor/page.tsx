@@ -1,219 +1,164 @@
 "use client";
-import { useState, useRef, ChangeEvent } from 'react';
+import { useState, ChangeEvent, FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
-// --- 1. ENUMS ---
-enum Category {
-  Elektrik = "Elektrik",
-  Bangunan = "Bangunan",
-  Perabot = "Perabot",
-  Kebersihan = "Kebersihan"
-}
+// --- CONFIGURATION ---
+// Ensure this matches the IP in your Landing Page!
+const API_IP = "172.20.10.3"; 
+const API_URL = `http://${API_IP}:5000`;
 
-enum Level {
-  Ground = "G",
-  One = "1",
-  Two = "2",
-  Three = "3"
-}
-
-export default function Home() {
-  // --- STATE ---
-  const [level, setLevel] = useState<Level>(Level.Ground);
-  const [category, setCategory] = useState<Category>(Category.Elektrik);
-  const [subCategory, setSubCategory] = useState<string>('');
-  const [customIssue, setCustomIssue] = useState('');
-  const [name, setName] = useState('');
-
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+export default function LaporPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
+  
+  // Form States
+  const [issue, setIssue] = useState('');
+  const [category, setCategory] = useState('Elektrik'); // Default
+  const [level, setLevel] = useState('G'); // Default
+  const [file, setFile] = useState<File | null>(null);
 
-  // --- DATA OPTIONS ---
-  const problemTypes = {
-    [Category.Elektrik]: ['Lampu Rosak/Kelip', 'Kipas Tidak Pusing', 'Soket Tidak Berfungsi', 'Aircond Panas/Boc', 'Lain-lain'],
-    [Category.Bangunan]: ['Pintu/Tombol Rosak', 'Lantai Pecah/Jubin Cabut', 'Siling Bocor', 'Cermin Tingkap Pecah', 'Paip Bocor', 'Lain-lain'],
-    [Category.Perabot]: ['Kerusi Patah', 'Meja Goyang/Rosak', 'Papan Putih Rosak', 'Rak Buku Rosak', 'Lain-lain'],
-    [Category.Kebersihan]: ['Sampah Sarap', 'Lantai Basah/Licin', 'Bau Busuk', 'Tandas Kotor/Sumbat', 'Lain-lain']
-  };
-
-  // --- HANDLERS ---
+  // Handle File Selection
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setPhotoFile(file);
-      setPhotoPreview(URL.createObjectURL(file));
+      setFile(e.target.files[0]);
     }
   };
 
-  const handleSubmit = async () => {
-    // 1. Validation
-    const finalIssue = subCategory === 'Lain-lain' ? customIssue : subCategory;
-
-    if (!name) { alert("Sila isi Nama!"); return; }
-    if (!finalIssue) { alert("Sila pilih Masalah!"); return; }
-    if (!photoFile) { alert("Wajib ambil gambar bukti!"); return; }
-
+  // Handle Form Submission
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
     setLoading(true);
 
-    try {
-      // 2. Prepare Data for Python
-      const formData = new FormData();
-      formData.append('name', name);
-      formData.append('level', level);
-      formData.append('category', category);
-      formData.append('issue', finalIssue);
-      formData.append('photo', photoFile); // The actual file
+    // 1. Prepare Data to send
+    const formData = new FormData();
+    formData.append('issue', issue);
+    formData.append('category', category);
+    formData.append('level', level);
+    formData.append('status', 'Baru'); // Default status
+    
+    // IMPORTANT: Make sure your Python backend expects 'image' as the key
+    if (file) {
+      formData.append('image', file);
+    }
 
-   // 3. Send to Flask (Public Dev Tunnel URL)
-      // REPLACE the URL below with YOUR specific Port 5000 link
-      const response = await fetch('https://3t508rcp-5000.asse.devtunnels.ms/api/submit', { 
+    try {
+      // 2. Send to the 172.x.x.x IP (Not Localhost!)
+      const res = await fetch(`${API_URL}/api/reports`, {
         method: 'POST',
-        body: formData,
+        body: formData, // Do NOT set Content-Type header manually when using FormData
       });
 
-      const result = await response.json();
-
-      if (response.ok) {
-        alert("✅ Laporan Berjaya Dihantar ke Server Local!");
-
-        // Reset Form
-        setPhotoPreview(null);
-        setPhotoFile(null);
-        setName('');
-        setSubCategory('');
-        setCustomIssue('');
+      if (res.ok) {
+        alert("Aduan berjaya dihantar!");
+        router.push('/'); // Go back to home
       } else {
-        throw new Error(result.error || "Gagal menghantar");
+        alert("Gagal menghantar aduan. Sila cuba lagi.");
+        console.error("Server Error:", await res.text());
       }
-
-    } catch (error: any) {
-      console.error("FULL ERROR:", error);
-      alert(`❌ Error: ${error.message}`);
+    } catch (error) {
+      console.error("Network Error:", error);
+      alert("Ralat rangkaian! Pastikan anda sambung ke Hotspot yang sama.");
     } finally {
       setLoading(false);
     }
   };
 
-  // --- STYLES ---
-  const inputStyle = "w-full p-3 border rounded-lg bg-white text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500";
-
   return (
-    <div className="min-h-screen bg-gray-100 p-4 font-sans text-gray-900">
-      <div className="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden p-6">
-        <h1 className="text-2xl font-bold text-center mb-6 text-blue-800">Laporan Kerosakan SOC</h1>
-
-        {/* NAMA */}
-        <div className="mb-4">
-          <label className="block text-sm font-bold text-gray-700 mb-1">Nama Pelapor</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className={inputStyle}
-            placeholder="Contoh: Ali Bin Abu"
-          />
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 px-6">
+      
+      <div className="max-w-md w-full mx-auto bg-white p-8 rounded-xl shadow-lg border border-gray-100">
+        
+        {/* Header */}
+        <div className="mb-8 text-center">
+          <h1 className="text-2xl font-bold text-gray-900">📝 Lapor Kerosakan</h1>
+          <p className="text-gray-500 text-sm mt-2">Isi butiran di bawah untuk tindakan segera.</p>
         </div>
 
-        {/* LEVEL */}
-        <div className="mb-4">
-          <label className="block text-sm font-bold text-gray-700 mb-1">Aras / Tingkat</label>
-          <select
-            value={level}
-            onChange={(e) => setLevel(e.target.value as Level)}
-            className={inputStyle}
-          >
-            {Object.values(Level).map((lvl) => (
-              <option key={lvl} value={lvl} className="text-black">
-                {lvl === 'G' ? 'Ground Floor' : `Level ${lvl}`}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* CATEGORY */}
-        <div className="mb-4">
-          <label className="block text-sm font-bold text-gray-700 mb-1">Kategori Masalah</label>
-          <div className="grid grid-cols-2 gap-2">
-            {Object.values(Category).map((cat) => (
-              <button
-                key={cat}
-                onClick={() => { setCategory(cat as Category); setSubCategory(''); }}
-                className={`p-2 rounded-lg text-sm font-bold transition shadow-sm ${category === cat
-                    ? 'bg-blue-600 text-white ring-2 ring-blue-300'
-                    : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-                  }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* SUB-CATEGORY */}
-        <div className="mb-4">
-          <label className="block text-sm font-bold text-gray-700 mb-1">Masalah Spesifik</label>
-          <select
-            value={subCategory}
-            onChange={(e) => setSubCategory(e.target.value)}
-            className={inputStyle}
-          >
-            <option value="" className="text-gray-400">-- Pilih Masalah --</option>
-            {problemTypes[category].map((problem) => (
-              <option key={problem} value={problem} className="text-black">{problem}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* CUSTOM ISSUE */}
-        {subCategory === 'Lain-lain' && (
-          <div className="mb-4">
-            <textarea
-              value={customIssue}
-              onChange={(e) => setCustomIssue(e.target.value)}
-              className={inputStyle}
-              placeholder="Nyatakan masalah anda..."
-              rows={3}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          
+          {/* Issue Input */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Masalah / Isu</label>
+            <input 
+              required
+              type="text" 
+              value={issue}
+              onChange={(e) => setIssue(e.target.value)}
+              placeholder="Contoh: Soket terbakar / Paip bocor"
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
             />
           </div>
-        )}
 
-        {/* CAMERA */}
-        <div className="mb-6">
-          <label className="block text-sm font-bold text-gray-700 mb-1">Bukti Gambar</label>
-          <input
-            type="file"
-            accept="image/*"
-            capture="environment"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            className="hidden"
-          />
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed border-gray-400 rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition bg-gray-50"
-          >
-            {photoPreview ? (
-              <img src={photoPreview} alt="Preview" className="h-40 object-cover rounded-md shadow-sm" />
-            ) : (
-              <>
-                <div className="text-4xl mb-2">📷</div>
-                <span className="text-gray-600 font-medium text-sm">Tap untuk ambil gambar</span>
-              </>
-            )}
+          {/* Category Dropdown */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Kategori</label>
+              <select 
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+              >
+                <option value="Elektrik">Elektrik</option>
+                <option value="Sivil">Sivil (Paip/Dinding)</option>
+                <option value="Perabot">Perabot</option>
+                <option value="Lain-lain">Lain-lain</option>
+              </select>
+            </div>
+
+            {/* Level Dropdown */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Aras / Lokasi</label>
+              <select 
+                value={level}
+                onChange={(e) => setLevel(e.target.value)}
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+              >
+                <option value="G">Aras G</option>
+                <option value="1">Aras 1</option>
+                <option value="2">Aras 2</option>
+                <option value="3">Aras 3</option>
+              </select>
+            </div>
           </div>
-        </div>
 
-        {/* SUBMIT */}
-        <button
-          onClick={handleSubmit}
-          disabled={loading}
-          className={`w-full py-4 rounded-xl text-white font-bold text-lg shadow-lg transition transform active:scale-95 ${loading ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'
-            }`}
-        >
-          {loading ? 'Sedang Hantar...' : 'HANTAR LAPORAN 🚀'}
-        </button>
+          {/* Image Upload */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Gambar Bukti</label>
+            <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:bg-gray-50 transition cursor-pointer relative">
+              <div className="space-y-1 text-center">
+                <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                  <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <div className="text-sm text-gray-600">
+                  <label className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none">
+                    <span>Muat naik gambar</span>
+                    <input type="file" className="sr-only" onChange={handleFileChange} accept="image/*" />
+                  </label>
+                </div>
+                <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
+                {file && <p className="text-sm text-green-600 font-bold mt-2">File dipilih: {file.name}</p>}
+              </div>
+            </div>
+          </div>
 
+          {/* Submit Button */}
+          <button 
+            type="submit" 
+            disabled={loading}
+            className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+          >
+            {loading ? 'Sedang Menghantar...' : 'Hantar Laporan'}
+          </button>
+
+          {/* Cancel Button */}
+          <Link href="/">
+             <button type="button" className="w-full mt-3 py-3 text-sm text-gray-500 hover:text-gray-700 font-medium">
+               Batal / Kembali
+             </button>
+          </Link>
+
+        </form>
       </div>
     </div>
   );
